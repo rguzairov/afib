@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TextArea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { TurnstileWidget, useTurnstileController } from "@/components/turnstile-widget";
 
 export type AddPageCopy = {
   pageTitle: string;
@@ -39,8 +38,6 @@ export default function AddPage({ copy, typeId, redirectHref }: AddPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
-  const turnstile = useTurnstileController();
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,15 +46,9 @@ export default function AddPage({ copy, typeId, redirectHref }: AddPageProps) {
 
     const name = title.trim();
     const details = description.trim();
-    const captchaToken = turnstile.getToken();
 
     if (!name) {
       setSubmitError("Name is required.");
-      return;
-    }
-
-    if (!captchaToken) {
-      setSubmitError("Please complete the captcha before submitting.");
       return;
     }
 
@@ -67,7 +58,6 @@ export default function AddPage({ copy, typeId, redirectHref }: AddPageProps) {
         name,
         description: details || null,
         typeId,
-        captchaToken,
       });
 
       if (redirectHref) {
@@ -79,7 +69,6 @@ export default function AddPage({ copy, typeId, redirectHref }: AddPageProps) {
       setSubmitted(true);
       setTitle("");
       setDescription("");
-      turnstile.reset();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected error occurred.";
       setSubmitError(message);
@@ -133,18 +122,8 @@ export default function AddPage({ copy, typeId, redirectHref }: AddPageProps) {
           />
         </div>
 
-        <div className="space-y-2">
-          {turnstileSiteKey ? (
-            <>
-              <TurnstileWidget siteKey={turnstileSiteKey} controller={turnstile} />
-            </>
-          ) : (
-            <p className="text-sm text-amber-700">Captcha is not configured.</p>
-          )}
-        </div>
-
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={isSubmitting || !turnstileSiteKey || !turnstile.ready}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2">
                 <Spinner className="border-white/80 border-t-white" />

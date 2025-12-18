@@ -3,12 +3,10 @@ import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/validation";
-import { verifyTurnstileToken } from "@/lib/turnstile";
 import {
   type DiseaseElementTypeId,
   isValidDiseaseElementTypeId,
 } from "@/lib/disease-elements";
-import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 const DISEASE_ELEMENT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -18,7 +16,6 @@ type DiseaseElementPayload = {
   name?: string;
   description?: string;
   typeId?: number;
-  captchaToken?: string;
 };
 
 type ValidatedPayload = {
@@ -55,17 +52,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { captchaToken } = payload;
-
-  if (!captchaToken) {
-    return NextResponse.json({ error: "Captcha is required." }, { status: 400 });
-  }
-
-  const captchaValid = await verifyCaptcha(captchaToken);
-  if (!captchaValid) {
-    return NextResponse.json({ error: "Captcha validation failed." }, { status: 400 });
-  }
-
   const validated = validatePayload(payload);
   if (!validated.ok) {
     return NextResponse.json({ error: validated.error }, { status: 400 });
@@ -75,14 +61,49 @@ export async function POST(request: Request) {
 
   try {
     const supabase = getSupabaseServerClient();
-    const { error } = await supabase.from("disease_element").insert({
-      name,
-      description,
-      type_id: typeId,
+    const { data: insertedElement, error: insertError } = await supabase
+      .from("disease_element")
+      .insert({
+        name,
+        description,
+        type_id: typeId,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("Failed to save disease element", insertError);
+      return NextResponse.json(
+        { error: "Unable to save right now. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    const elementId =
+      insertedElement && typeof (insertedElement as { id?: unknown }).id === "number"
+        ? (insertedElement as { id: number }).id
+        : null;
+
+    if (!elementId) {
+      console.error("Disease element insert did not return an id.");
+      return NextResponse.json(
+        { error: "Unable to save right now. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    const { error: answerError } = await supabase.from("disease_element_answers").insert({
+      element_id: elementId,
+      answer: true,
     });
 
-    if (error) {
-      console.error("Failed to save disease element", error);
+    if (answerError) {
+      console.error("Failed to save disease element default answer", answerError);
+      try {
+        await supabase.from("disease_element").delete().eq("id", elementId);
+      } catch (rollbackError) {
+        console.error("Failed to roll back disease element after answer insert failure", rollbackError);
+      }
       return NextResponse.json(
         { error: "Unable to save right now. Please try again." },
         { status: 500 },
@@ -141,10 +162,6 @@ function validatePayload(payload: DiseaseElementPayload):
       typeId: typeId as DiseaseElementTypeId,
     },
   };
-}
-
-async function verifyCaptcha(token: string) {
-  return verifyTurnstileToken(token, env.TURNSTILE_SECRET_KEY);
 }
 
 function containsProhibitedContent(text: string) {

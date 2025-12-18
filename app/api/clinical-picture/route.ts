@@ -3,8 +3,6 @@ import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/validation";
-import { verifyTurnstileToken } from "@/lib/turnstile";
-import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 const CLINICAL_PICTURE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -14,7 +12,6 @@ type ClinicalPicturePayload = {
   diagnosis?: string;
   description?: string;
   diagnosisYear?: number | null;
-  captchaToken?: string;
   acknowledged?: boolean;
 };
 
@@ -22,14 +19,6 @@ type ValidatedPayload = {
   diagnosis: string;
   description: string;
   diagnosisYear: number | null;
-};
-
-type ClinicalPictureRecord = {
-  id: number;
-  created_at: string;
-  diagnosis: string | null;
-  description: string | null;
-  diagnosis_year: number | null;
 };
 
 export async function POST(request: Request) {
@@ -58,17 +47,6 @@ export async function POST(request: Request) {
     payload = (await request.json()) as ClinicalPicturePayload;
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-
-  const captchaToken = payload.captchaToken?.trim() ?? "";
-
-  if (!captchaToken) {
-    return NextResponse.json({ error: "Captcha is required." }, { status: 400 });
-  }
-
-  const captchaValid = await verifyCaptcha(captchaToken);
-  if (!captchaValid) {
-    return NextResponse.json({ error: "Captcha validation failed." }, { status: 400 });
   }
 
   const validated = validatePayload(payload);
@@ -104,10 +82,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
-
-async function verifyCaptcha(token: string) {
-  return verifyTurnstileToken(token, env.TURNSTILE_SECRET_KEY);
 }
 
 function validatePayload(payload: ClinicalPicturePayload):

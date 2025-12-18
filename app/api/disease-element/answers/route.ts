@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { verifyTurnstileToken } from "@/lib/turnstile";
 import { DISEASE_ELEMENT_TYPE_IDS } from "@/lib/disease-elements";
-import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 const VOTE_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -17,7 +15,6 @@ type AnswerRecord = {
 
 type RequestPayload = {
   answers?: AnswerRecord[];
-  captchaToken?: string;
 };
 
 type ValidatedAnswer = {
@@ -50,26 +47,6 @@ export async function POST(request: Request) {
           headers: { "Retry-After": String(limited.retryAfterSeconds) },
         },
       );
-    }
-  }
-
-  const captchaRequired = process.env.TURNSTILE_REQUIRE_ANSWERS_CAPTCHA === "true";
-  const captchaToken = payload.captchaToken?.trim() ?? "";
-  const turnstileSecret = env.TURNSTILE_SECRET_KEY;
-
-  if (captchaRequired && !captchaToken) {
-    return NextResponse.json({ error: "Captcha is required." }, { status: 400 });
-  }
-
-  if ((captchaRequired || captchaToken) && !turnstileSecret) {
-    console.error("TURNSTILE_SECRET_KEY is not configured.");
-    return NextResponse.json({ error: "Server misconfigured." }, { status: 500 });
-  }
-
-  if (captchaToken && turnstileSecret) {
-    const captchaValid = await verifyTurnstileToken(captchaToken, turnstileSecret);
-    if (!captchaValid) {
-      return NextResponse.json({ error: "Captcha validation failed." }, { status: 400 });
     }
   }
 

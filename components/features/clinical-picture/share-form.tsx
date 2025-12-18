@@ -8,7 +8,6 @@ import { TextArea } from "@/components/ui/textarea";
 import { CheckboxField } from "@/components/ui/checkbox-field";
 import { FormField } from "@/components/ui/form-field";
 import { Spinner } from "@/components/ui/spinner";
-import { TurnstileWidget, useTurnstileController } from "@/components/turnstile-widget";
 
 export const shareCopy = {
   title: "Share your clinical picture",
@@ -35,20 +34,11 @@ export function ClinicalPictureShareForm() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const turnstile = useTurnstileController();
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError("");
     setSubmitted(false);
-
-    const captchaToken = turnstile.getToken();
-
-    if (!captchaToken) {
-      setSubmitError("Please complete the captcha before submitting.");
-      return;
-    }
 
     const diagnosisText = diagnosis.trim();
     const descriptionText = clinicalPicture.trim();
@@ -61,7 +51,6 @@ export function ClinicalPictureShareForm() {
         diagnosis: diagnosisText,
         description: descriptionText,
         diagnosisYear: diagnosisYearNumber,
-        captchaToken,
         acknowledged,
       });
 
@@ -70,7 +59,6 @@ export function ClinicalPictureShareForm() {
       setDiagnosisYear("");
       setClinicalPicture("");
       setAcknowledged(false);
-      turnstile.reset();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected error occurred.";
       setSubmitError(message);
@@ -134,22 +122,8 @@ export function ClinicalPictureShareForm() {
           />
         </div>
 
-        <div className="space-y-2">
-          {turnstileSiteKey ? (
-            <>
-              <div className="max-w-full overflow-x-auto">
-                <div className="min-w-[300px]">
-                  <TurnstileWidget siteKey={turnstileSiteKey} controller={turnstile} />
-                </div>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-amber-700">Captcha is not configured.</p>
-          )}
-        </div>
-
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={isSubmitting || !turnstileSiteKey || !turnstile.ready}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2">
                 <Spinner className="border-white/80 border-t-white" />

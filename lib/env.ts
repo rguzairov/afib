@@ -5,10 +5,8 @@ type EnvShape = {
   SUPABASE_PUBLISHABLE_KEY: string | undefined;
   SUPABASE_ANON_KEY: string | undefined;
   SUPABASE_SERVICE_ROLE_KEY?: string;
-  TURNSTILE_SECRET_KEY: string;
   OPENAI_API_KEY?: string;
   CLINICAL_PICTURE_SUMMARY_SECRET?: string;
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
 };
 
 function requireEnv(name: keyof EnvShape, value: string | undefined): string {
@@ -28,17 +26,13 @@ const envCache = (() => {
     throw new Error("Missing SUPABASE_PUBLISHABLE_KEY or SUPABASE_ANON_KEY environment variable.");
   }
 
-  const TURNSTILE_SECRET_KEY = requireEnv("TURNSTILE_SECRET_KEY", process.env.TURNSTILE_SECRET_KEY);
-
   return {
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY,
     SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    TURNSTILE_SECRET_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     CLINICAL_PICTURE_SUMMARY_SECRET: process.env.CLINICAL_PICTURE_SUMMARY_SECRET,
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   } satisfies EnvShape;
 })();
 
