@@ -5,7 +5,7 @@ import { clampInt, sanitizeText } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
-const summarySecret = process.env.CLINICAL_PICTURE_SUMMARY_SECRET;
+const summarySecret = process.env.CRON_SECRET;
 const summaryModel = process.env.CLINICAL_PICTURE_SUMMARY_MODEL?.trim() || "gpt-4.1";
 const summaryDbRowLimit = clampInt(process.env.CLINICAL_PICTURE_SUMMARY_DB_ROWS, 500, 50, 5_000);
 const summaryModelRowLimit = clampInt(process.env.CLINICAL_PICTURE_SUMMARY_MODEL_ROWS, 120, 20, 500);
@@ -31,26 +31,20 @@ type SummaryShape = {
   insights: string[];
 };
 
-// Keep GET guarded to avoid accidental public execution.
-export async function GET() {
-  return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
+// Vercel Cron Jobs invoke this endpoint via GET.
+export async function GET(request: Request) {
+  return handleSummarize(request);
 }
 
 export async function POST(request: Request) {
+  return handleSummarize(request);
+}
+
+async function handleSummarize(request: Request) {
   const providedSecret = getProvidedSecret(request);
 
-  // In production (and other non-dev environments), require a secret for all invocations.
-  // Do not rely on host / forwarded headers for auth decisions.
-  const requireSecret = process.env.NODE_ENV !== "development";
-  if (requireSecret) {
-    if (!summarySecret) {
-      console.error("CLINICAL_PICTURE_SUMMARY_SECRET is not configured; refusing access.");
-      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
-    }
-
-    if (!providedSecret || providedSecret !== summarySecret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!providedSecret || providedSecret !== summarySecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const openAIApiKey = process.env.OPENAI_API_KEY;

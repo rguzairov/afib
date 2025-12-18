@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/clinical-picture/summarize",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}
