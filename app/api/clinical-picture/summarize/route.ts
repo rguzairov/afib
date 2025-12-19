@@ -41,9 +41,10 @@ export async function POST(request: Request) {
 }
 
 async function handleSummarize(request: Request) {
-  const providedSecret = getProvidedSecret(request);
 
-  if (!providedSecret || providedSecret !== summarySecret) {
+  const authHeader = request.headers.get("authorization")
+
+  if (authHeader !== `Bearer ${summarySecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -212,15 +213,6 @@ function buildMessages(
     { role: "system" as const, content: system },
     { role: "user" as const, content: userParts.join("\n") },
   ];
-}
-
-function getProvidedSecret(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.toLowerCase().startsWith("bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-  const headerSecret = request.headers.get("x-cron-secret");
-  return headerSecret?.trim() ?? null;
 }
 
 function normalizeSummaryShape(value: unknown): SummaryShape | null {
