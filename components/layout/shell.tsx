@@ -15,7 +15,7 @@ type NavNode = {
 
 const navTree: NavNode[] = [
   { label: "Dashboard", href: "/", icon: "speedometer2" },
-  { label: "Clinical Picture", href: "/clinical-picture", icon: "images" },
+  { label: "Clinical Picture", href: "/clinical-picture", icon: "images", hidden: true },
   { label: "Triggers", href: "/triggers", icon: "lightning-charge" },
   { label: "Symptoms", href: "/symptoms", icon: "heart-pulse" },
   { label: "Supplements", href: "/supplements", icon: "droplet-half" },

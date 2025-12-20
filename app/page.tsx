@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AISummarySectionServer } from "@/components/features/clinical-picture/ai-summary";
 import { countDiseaseElementAnswers } from "@/lib/disease-elements";
 
 type MetricProps = { title: string; value: string; href?: string };
 
 export const metadata: Metadata = {
   title: "AFib Dashboard | Overview",
-  description: "Live AFib community dashboards across triggers, symptoms, supplements, and clinical pictures.",
+  description: "Live AFib community dashboards across triggers, symptoms, and supplements.",
 };
 
 export const dynamic = "force-dynamic";
@@ -34,7 +33,7 @@ export default async function Home() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
             <p className="text-sm text-slate-500">
-              Accumulated statistics across triggers, symptoms, supplements, and clinical pictures.
+              Accumulated statistics across triggers, symptoms, and supplements.
             </p>
           </div>
           <span className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white shadow-sm">Live</span>
@@ -45,7 +44,6 @@ export default async function Home() {
           ))}
         </div>
       </section>
-      <AISummarySectionServer />
     </div>
   );
 }
